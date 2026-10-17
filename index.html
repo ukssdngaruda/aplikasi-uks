@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aplikasi UKS</title>
+  <link rel="manifest" id="manifestLink" href="manifest.json">
+  <meta name="theme-color" content="#009634">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Layar login -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+  #loginOverlay {
+    --uks-green: #009634;
+    --uks-green-strong: #00782d;
+    --uks-green-deep: #04250f;
+    --uks-green-mid: #07421d;
+    --uks-gold: #ffd23f;
+    --uks-tint: #e6f4ea;
+    --uks-ink: #0c3b1d;
+    --uks-muted: #5d7566;
+
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', Roboto, Arial, sans-serif;
+    color: #fff;
+    background:
+      radial-gradient(900px 500px at 85% 10%, rgba(0, 150, 52, .35), transparent 60%),
+      linear-gradient(160deg, var(--uks-green-mid) 0%, var(--uks-green-deep) 100%);
+  }
+  #loginOverlay *, #loginOverlay *::before, #loginOverlay *::after { box-sizing: border-box; }
+
+  .lg-shell {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 28px 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  .lg-brand { display: flex; align-items: center; gap: 14px; }
+  .lg-logo-tile {
+    width: 56px; height: 56px; flex: none;
+    background: #fff; border-radius: 14px;
+    display: grid; place-items: center;
+    padding: 5px;
+  }
+  .lg-logo-tile img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .lg-brand-text { display: flex; flex-direction: column; line-height: 1.25; }
+  .lg-brand-text strong { font-size: 15px; font-weight: 700; }
+  .lg-brand-text span { font-size: 12.5px; color: #b9dcc4; }
+  .lg-brand-divider { width: 1px; height: 32px; background: rgba(255,255,255,.25); }
+
+  /* Body */
+  .lg-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 56px;
+    align-items: center;
+    padding: 40px 0;
+  }
+
+  /* Hero */
+  .lg-hero h1 {
+    margin: 0 0 18px;
+    font-size: clamp(30px, 4.2vw, 46px);
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: -.02em;
+  }
+  .lg-hero h1 .lg-hl { color: var(--uks-gold); }
+  .lg-hero p {
+    margin: 0 0 28px;
+    max-width: 62ch;
+    font-size: 14px;
+    line-height: 1.75;
+    color: #d3ead9;
+  }
+  .lg-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .lg-info-item {
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.14);
+  }
+  .lg-info-item b { display: block; margin-bottom: 6px; font-size: 12px; color: var(--uks-gold); font-weight: 700; }
+  .lg-info-item span { font-size: 12.5px; line-height: 1.5; color: #e6f4ea; }
+
+  /* Kartu login */
+  .lg-card {
+    background: rgba(255,255,255,0.82);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(22px) saturate(160%);
+    color: var(--uks-ink);
+    border-radius: 18px;
+    padding: 30px 30px 26px;
+    border: 1px solid rgba(255,255,255,0.45);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+    margin: 0;
+  }
+  /* Browser lama tanpa dukungan backdrop-filter: jatuh ke latar putih solid biasa */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .lg-card { background: #fff; }
+  }
+  .lg-card h2 { margin: 0; text-align: center; font-size: 18px; font-weight: 800; color: var(--uks-green-strong); }
+  .lg-sub { margin: 4px 0 18px; text-align: center; font-size: 12.5px; color: var(--uks-muted); }
+
+  /* Pilihan peran (radio, tanpa JS) */
+  .lg-roles { display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px; margin-bottom: 20px; border: 0; padding: 0; min-width: 0; }
+  .lg-roles legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .lg-role { grid-column: span 3; position: relative; }
+  .lg-role:nth-of-type(n+5) { grid-column: span 4; }
+  .lg-role input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .lg-role label {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    min-height: 62px; padding: 8px 4px;
+    border-radius: 10px;
+    background: var(--uks-tint);
+    color: var(--uks-green-strong);
+    font-size: 11.5px; font-weight: 700; text-align: center; line-height: 1.2;
+    border: 2px solid transparent;
+    transition: background .15s, color .15s, border-color .15s;
+    pointer-events: none;
+  }
+  .lg-role .lg-ico { font-size: 18px; line-height: 1; }
+  .lg-role input:hover + label { border-color: var(--uks-green); }
+  .lg-role input:checked + label { background: var(--uks-green-strong); color: #fff; border-color: var(--uks-green-strong); }
+  .lg-role input:focus-visible + label { outline: 3px solid var(--uks-gold); outline-offset: 2px; }
+
+  /* Form */
+  .lg-field { margin-bottom: 14px; }
+  .lg-field label { display: block; margin-bottom: 6px; font-size: 12.5px; font-weight: 700; color: var(--uks-green-strong); }
+  .lg-field input {
+    width: 100%; height: 46px; padding: 0 14px;
+    font: inherit; font-size: 14px; color: var(--uks-ink);
+    background: #fff; border: 1.5px solid #cfe3d6; border-radius: 10px;
+    outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  .lg-field input::placeholder { color: #93a89a; }
+  .lg-field input:focus { border-color: var(--uks-green); box-shadow: 0 0 0 3px rgba(0, 150, 52, .18); }
+  .lg-pass { position: relative; }
+  .lg-pass input { padding-right: 64px; }
+  .lg-pass button {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    height: 34px; padding: 0 10px; border: 0; background: transparent; cursor: pointer;
+    font: inherit; font-size: 12.5px; font-weight: 700; color: var(--uks-green-strong); border-radius: 8px;
+  }
+  .lg-pass button:hover { background: var(--uks-tint); }
+  .lg-pass button:focus-visible { outline: 3px solid var(--uks-gold); }
+
+  .lg-hint { margin: 2px 0 16px; font-size: 11.5px; color: var(--uks-muted); line-height: 1.5; }
+  .lg-error {
+    margin-bottom: 14px; padding: 10px 12px; border-radius: 10px;
+    background: #fdecec; color: #a12222; font-size: 12.5px; font-weight: 600; line-height: 1.45;
+  }
+  .lg-btn {
+    width: 100%; height: 48px; border: 0; border-radius: 10px; cursor: pointer;
+    font: inherit; font-size: 14.5px; font-weight: 800; color: #fff; background: var(--uks-green-strong);
+    transition: background .15s, transform .05s;
+  }
+  .lg-btn:hover { background: var(--uks-green); }
+  .lg-btn:active { transform: translateY(1px); }
+  .lg-btn:disabled { opacity: .65; cursor: progress; }
+  .lg-btn:focus-visible { outline: 3px solid var(--uks-gold); outline-offset: 2px; }
+
+  /* Footer */
+  .lg-footer {
+    padding-top: 16px; border-top: 1px solid rgba(255,255,255,.14);
+    text-align: center; font-size: 11.5px; color: #a9d0b5;
+  }
+
+  /* Responsif — panel kiri (paragraf + 3 kotak info) TETAP tampil di HP */
+  @media (max-width: 900px) {
+    .lg-body { grid-template-columns: 1fr; gap: 24px; padding: 24px 0; }
+    .lg-hero h1 { font-size: 28px; margin: 0 0 14px; }
+    .lg-hero p { display: block; margin: 0 0 18px; font-size: 13px; line-height: 1.7; }
+    .lg-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  }
+  @media (max-width: 640px) {
+    .lg-info { grid-template-columns: 1fr; }
+    .lg-info-item { padding: 12px 14px; }
+    .lg-info-item b { margin-bottom: 4px; }
+  }
+  @media (max-width: 480px) {
+    .lg-shell { padding: 18px 14px 14px; }
+    .lg-card { padding: 22px 18px 20px; }
+    .lg-hero h1 { font-size: 26px; }
+    .lg-role, .lg-role:nth-of-type(n+5) { grid-column: span 6; }
+    .lg-role:last-of-type { grid-column: span 12; }
+    .lg-brand-divider, .lg-brand-text span { display: none; }
+  }
+</style>
+
+<div class="lg-overlay" id="loginOverlay">
+  <div class="lg-shell">
+
+    <header class="lg-brand">
+      <div class="lg-logo-tile">
+        <img src="data:image/jpeg;base64,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" alt="Logo UKS">
+      </div>
+      <div class="lg-brand-text">
+        <strong id="loginSchoolName">Aplikasi UKS</strong>
+        <span>UPT SPF SD NEGERI GARUDA</span>
+      </div>
+    </header>
+
+    <div class="lg-body">
+
+      <section class="lg-hero">
+        <h1>
+          Sistem Informasi
+          <span class="lg-hl">U</span>saha
+          <span class="lg-hl">K</span>esehatan
+          <span class="lg-hl">S</span>ekolah
+        </h1>
+        <p>
+          Aplikasi UKS membantu sekolah mencatat dan memantau kesehatan warga sekolah
+          dalam satu tempat: kunjungan ruang UKS, pemeriksaan siswa, stok obat dan P3K,
+          hingga kegiatan Palang Merah Remaja. Data tersimpan rapi, mudah dicari,
+          dan siap dilaporkan kapan saja oleh petugas, dokter pembina, dan pengurus UKS.
+        </p>
+        <div class="lg-info">
+          <div class="lg-info-item">
+            <b>Trias UKS</b>
+            <span>Pendidikan kesehatan, pelayanan kesehatan, dan lingkungan sekolah sehat</span>
+          </div>
+          <div class="lg-info-item">
+            <b>Pencatatan</b>
+            <span>Kunjungan, pemeriksaan, obat, dan P3K</span>
+          </div>
+          <div class="lg-info-item">
+            <b>Pengguna</b>
+            <span>Petugas, dokter pembina, pengurus, dan kader PMR</span>
+          </div>
+        </div>
+      </section>
+
+      <form class="lg-card" id="loginForm" autocomplete="on">
+        <h2>Masuk ruang layanan UKS</h2>
+        <p class="lg-sub">Pilih peran Anda, lalu masuk dengan akun Anda.</p>
+
+        <fieldset class="lg-roles">
+          <legend>Peran</legend>
+
+          <div class="lg-role">
+            <input type="radio" name="loginRole" id="role_Pembina" value="Pembina">
+            <label for="role_Pembina"><span class="lg-ico">🎓</span>Pembina</label>
+          </div>
+          <div class="lg-role">
+            <input type="radio" name="loginRole" id="role_PetugasUKS" value="PetugasUKS" checked>
+            <label for="role_PetugasUKS"><span class="lg-ico">🩺</span>Petugas UKS</label>
+          </div>
+          <div class="lg-role">
+            <input type="radio" name="loginRole" id="role_DokterPembina" value="DokterPembina">
+            <label for="role_DokterPembina"><span class="lg-ico">👨‍⚕️</span>Dokter Pembina</label>
+          </div>
+          <div class="lg-role">
+            <input type="radio" name="loginRole" id="role_Ketua" value="Ketua">
+            <label for="role_Ketua"><span class="lg-ico">⭐</span>Ketua</label>
+          </div>
+          <div class="lg-role">
+            <input type="radio" name="loginRole" id="role_Sekretaris" value="Sekretaris">
+            <label for="role_Sekretaris"><span class="lg-ico">📝</span>Sekretaris</label>
+          </div>
+          <div class="lg-role">
+            <input type="radio" name="loginRole" id="role_Bendahara" value="Bendahara">
+            <label for="role_Bendahara"><span class="lg-ico">💰</span>Bendahara</label>
+          </div>
+          <div class="lg-role">
+            <input type="radio" name="loginRole" id="role_KaderPMR" value="KaderPMR">
+            <label for="role_KaderPMR"><span class="lg-ico">➕</span>Kader PMR</label>
+          </div>
+        </fieldset>
+
+        <div class="lg-field">
+          <label for="loginUsername">Nama akun</label>
+          <input type="text" id="loginUsername" placeholder="Contoh: Siti Aisyah" autocomplete="username" required>
+        </div>
+
+        <div class="lg-field">
+          <label for="loginPassword">Kata sandi</label>
+          <div class="lg-pass">
+            <input type="password" id="loginPassword" placeholder="Kata sandi" autocomplete="current-password" required>
+            <button type="button" id="togglePassword" aria-label="Lihat kata sandi">Lihat</button>
+          </div>
+        </div>
+
+        <p class="lg-hint">Gunakan nama akun dan kata sandi yang diberikan oleh admin UKS sekolah.</p>
+
+        <div class="lg-error" id="loginError" style="display:none;" role="alert"></div>
+
+        <button type="submit" class="lg-btn" id="loginBtn">Masuk</button>
+      </form>
+
+    </div>
+
+    <footer class="lg-footer">
+      Dikembangkan oleh: Rahmatang, S.Pd., Gr &nbsp;&bull;&nbsp; UPT SPF SD NEGERI GARUDA
+    </footer>
+
+  </div>
+</div>
+
+  <div id="app" style="display:none;">
+    <nav id="sidebar">
+      <div class="brand">
+        🏥 Aplikasi UKS
+        <small id="brandSchool">Memuat...</small>
+      </div>
+      <ul id="navList"><!-- diisi otomatis via JS sesuai hak akses role --></ul>
+      <div class="sidebar-footer">
+        <div class="user-box">
+          <div id="userInfo">-</div>
+          <button class="btn secondary small" id="logoutBtn">Keluar</button>
+        </div>
+        <button class="btn secondary small" id="publicDashboardBtn" style="width:100%;">🔗 Dashboard Publik (untuk Atasan)</button>
+      </div>
+    </nav>
+
+    <main id="main">
+      <div id="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button id="menuToggle">☰</button>
+          <h1 id="pageTitle">Dashboard</h1>
+        </div>
+        <button class="btn" id="addBtn" style="display:none;">+ Tambah Data</button>
+      </div>
+      <div id="content">
+        <div class="empty-state">Memuat aplikasi...</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Tambah Data</h3>
+        <button class="btn secondary small" id="modalClose">✕</button>
+      </div>
+      <div id="modalForm" class="form-grid"></div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="cancelBtn">Batal</button>
+        <button class="btn" id="saveBtn">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Import Excel: mengimpor banyak data sekaligus dari file Excel/CSV,
+       dipakai modul Data Siswa (bisa diperluas ke modul lain lewat IMPORT_CONFIG
+       di JavaScript.html). -->
+  <div class="modal-overlay" id="importModalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="importModalTitle">Import Data dari Excel</h3>
+        <button class="btn secondary small" id="importModalClose">✕</button>
+      </div>
+      <div id="importModalBody">
+        <p style="font-size:12.5px;color:#5f6368;margin-top:0;">
+          Pilih file Excel (.xlsx/.xls) atau CSV. Baris pertama yang berisi
+          nama kolom (mis. NISN, Nama, Kelas, Jenis Kelamin, dst) akan
+          dideteksi otomatis — urutan kolom di file Anda bebas.
+        </p>
+        <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv">
+        <div id="importPreviewArea"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="importCancelBtn">Batal</button>
+        <button class="btn" id="importConfirmBtn" style="display:none;">Impor Sekarang</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal konfirmasi hapus (BARU) — menampilkan ringkasan data yang akan
+       dihapus (mis. nama siswa/uraian kegiatan) supaya tidak salah hapus. -->
+  <div class="modal-overlay" id="deleteConfirmOverlay">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h3>Konfirmasi Hapus Data</h3>
+        <button class="btn secondary small" id="deleteConfirmClose">✕</button>
+      </div>
+      <p style="font-size:13.5px;color:#5f6368;margin-top:0;">
+        Anda yakin ingin menghapus data berikut? Tindakan ini <b>tidak dapat dibatalkan</b>.
+      </p>
+      <div id="deleteConfirmDetail" style="background:#f8f9fa;border-radius:8px;padding:12px 14px;margin:10px 0;"></div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="deleteConfirmCancel">Batal</button>
+        <button class="btn danger" id="deleteConfirmOk">Ya, Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay loading global (BARU) — tampil di tengah layar saat proses
+       simpan/hapus/muat data sedang berjalan. -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-box">
+      <span class="spinner spinner-lg"></span>
+      <div id="loadingText">Memproses...</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "Aplikasi UKS - UPT SPF SD Negeri Garuda",
+  "short_name": "UKS App",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#009634",
+  "icons": [
+    { "src": "https://www.gstatic.com/images/icons/material/system/2x/local_hospital_googblue_48dp.png", "sizes": "48x48", "type": "image/png" }
+  ]
+}

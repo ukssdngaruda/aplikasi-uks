@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Dashboard UKS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <style>
+    :root {
+      --primary: #1a73e8; --primary-dark: #0d47a1; --danger: #d93025;
+      --success: #188038; --warning: #f9ab00; --bg: #eef2f6; --card: #fff;
+      --text: #202124; --text-muted: #5f6368; --border: #e0e3e7;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+    .header {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      color: #fff; padding: 28px 24px; text-align: center;
+    }
+    .header h1 { margin: 0 0 4px; font-size: 22px; }
+    .header p { margin: 0; opacity: 0.9; font-size: 13.5px; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .stat-card { background: var(--card); border-radius: 14px; padding: 18px; border: 1px solid var(--border); text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .stat-card .num { font-size: 28px; font-weight: 800; color: var(--primary-dark); }
+    .stat-card .label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .stat-card.danger .num { color: var(--danger); }
+    .stat-card.warn .num { color: var(--warning); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    @media (max-width: 760px) { .grid-2 { grid-template-columns: 1fr; } }
+    .panel { background: var(--card); border-radius: 14px; border: 1px solid var(--border); padding: 18px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .panel h2 { font-size: 15px; margin: 0 0 12px; }
+    .chart-box { width: 100%; height: 260px; }
+    .footer-note { text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 20px; }
+    .loading { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .pilar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .pilar-row .name { flex: 0 0 180px; font-size: 12.5px; color: var(--text-muted); }
+    .pilar-bar-bg { flex: 1; background: #eef1f4; border-radius: 6px; height: 10px; overflow: hidden; }
+    .pilar-bar-fill { background: var(--primary); height: 100%; border-radius: 6px; }
+    .pilar-pct { flex: 0 0 40px; text-align: right; font-size: 12.5px; font-weight: 600; }
+    .badge-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; background: #eef1f4; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📊 Dashboard UKS</h1>
+    <p id="schoolInfo">Memuat...</p>
+  </div>
+  <div class="wrap" id="wrap">
+    <div class="loading">Memuat data dashboard...</div>
+  </div>
+
+  <script>
+    google.charts.load('current', { packages: ['corechart', 'bar'] });
+
+    google.script.run.withSuccessHandler(function (data) {
+      google.charts.setOnLoadCallback(function () { render(data); });
+    }).withFailureHandler(function (e) {
+      document.getElementById('wrap').innerHTML = '<div class="loading">Gagal memuat data: ' + (e.message || e) + '</div>';
+    }).getPublicDashboardStats();
+
+    function render(data) {
+      document.getElementById('schoolInfo').textContent =
+        data.sekolah.namaSekolah + ' — ' + data.sekolah.kotaKabupaten + ' — Tahun Ajaran ' + data.sekolah.tahunAjaran;
+
+      let html = '';
+
+      // Kartu ringkasan utama
+      html += '<div class="stat-grid">';
+      html += statCard(data.totalSiswa, 'Total Siswa Terdata', '');
+      html += statCard(data.totalTimUKS, 'Anggota Tim/Kader UKS', '');
+      html += statCard(data.totalDocil, 'Anggota Dokter Cilik', '');
+      html += statCard(data.totalObatItem, 'Jenis Obat/P3K Tersedia', '');
+      html += statCard(data.obatMenipis, 'Obat Stok Menipis', data.obatMenipis > 0 ? 'danger' : '');
+      html += '</div>';
+
+      html += '<div class="grid-2">';
+
+      // Panel: tren kunjungan
+      html += '<div class="panel"><h2>Tren Kunjungan UKS (6 Bulan Terakhir)</h2><div id="chartTren" class="chart-box"></div></div>';
+
+      // Panel: distribusi status gizi
+      html += '<div class="panel"><h2>Distribusi Status Gizi Siswa</h2><div id="chartGizi" class="chart-box"></div></div>';
+
+      html += '</div>';
+
+      // Panel: capaian program per pilar Trias UKS
+      html += '<div class="panel"><h2>Capaian Program Kerja per Pilar Trias UKS</h2>';
+      data.capaianPilar.forEach(function (p) {
+        const pct = p.target > 0 ? Math.round((p.terlaksana / p.target) * 100) : 0;
+        html += '<div class="pilar-row"><div class="name">' + p.pilar + '</div>' +
+          '<div class="pilar-bar-bg"><div class="pilar-bar-fill" style="width:' + pct + '%;"></div></div>' +
+          '<div class="pilar-pct">' + pct + '%</div></div>';
+      });
+      html += '</div>';
+
+      // Panel: keparahan kecelakaan
+      html += '<div class="panel"><h2>Kejadian Kecelakaan & Cedera (Berdasarkan Tingkat Keparahan)</h2><div class="badge-row">';
+      Object.keys(data.keparahanKecelakaan).forEach(function (k) {
+        html += '<div class="badge">' + k + ': <b>' + data.keparahanKecelakaan[k] + '</b></div>';
+      });
+      html += '</div></div>';
+
+      html += '<div class="footer-note">Data diperbarui otomatis dari Aplikasi UKS · Terakhir dimuat: ' + data.terakhirDiperbarui + '</div>';
+
+      document.getElementById('wrap').innerHTML = html;
+
+      // Render charts (setelah HTML ter-attach ke DOM)
+      drawTrenChart(data.trenKunjungan);
+      drawGiziChart(data.statusGizi);
+    }
+
+    function statCard(num, label, cls) {
+      return '<div class="stat-card ' + (cls || '') + '"><div class="num">' + num + '</div><div class="label">' + label + '</div></div>';
+    }
+
+    function drawTrenChart(tren) {
+      const dt = new google.visualization.DataTable();
+      dt.addColumn('string', 'Bulan');
+      dt.addColumn('number', 'Kunjungan');
+      tren.forEach(function (t) { dt.addRow([t.label, t.count]); });
+      const chart = new google.visualization.ColumnChart(document.getElementById('chartTren'));
+      chart.draw(dt, {
+        legend: { position: 'none' },
+        colors: ['#1a73e8'],
+        chartArea: { width: '85%', height: '70%' },
+        vAxis: { minValue: 0, format: '0' },
+        backgroundColor: 'transparent'
+      });
+    }
+
+    function drawGiziChart(statusGizi) {
+      const dt = new google.visualization.DataTable();
+      dt.addColumn('string', 'Kategori');
+      dt.addColumn('number', 'Jumlah');
+      Object.keys(statusGizi).forEach(function (k) { dt.addRow([k, statusGizi[k]]); });
+      const chart = new google.visualization.PieChart(document.getElementById('chartGizi'));
+      chart.draw(dt, {
+        colors: ['#f9ab00', '#188038', '#1a73e8', '#d93025'],
+        chartArea: { width: '90%', height: '80%' },
+        legend: { position: 'bottom', textStyle: { fontSize: 11 } },
+        backgroundColor: 'transparent',
+        pieHole: 0.4
+      });
+    }
+
+    window.addEventListener('resize', function () {
+      // Google Charts tidak auto-resize; reload sederhana saat resize besar (opsional, dibiarkan simpel)
+    });
+  </script>
+</body>
+</html>
